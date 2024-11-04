@@ -19,6 +19,7 @@ TextEditor::TextEditor(QWidget *parent, const QString& fileName)
     : QPlainTextEdit(parent)
     , m_lineNumberWidget(new LineNumberWidget(this))
     , m_fileName(fileName)
+    , m_firstSave(false)
 {
     setViewportMargins(25, 0, 0, 0);
     highlightCurrentLine();
@@ -27,7 +28,7 @@ TextEditor::TextEditor(QWidget *parent, const QString& fileName)
     connect(this, &QPlainTextEdit::cursorPositionChanged, this, &TextEditor::highlightCurrentLine);
     connect(this, &QPlainTextEdit::blockCountChanged, this, &TextEditor::updateLineNumberMargin);
 
-    //load(m_fileName);
+    load(m_fileName);
 }
 
 TextEditor::~TextEditor()
@@ -80,6 +81,8 @@ void TextEditor::load(QString fileName)
 {
     if(fileName == "") {
         m_fileName = tr("newfile.txt");
+        setFont(QFont("Monospace", 10));
+        setFocus();
         document()->setModified(false);
         emit documentChanged();
         return;
@@ -100,38 +103,67 @@ void TextEditor::load(QString fileName)
     QString text = file.readAll();
     file.close();
 
+    setFont(QFont("Monospace", 10));
+    setFocus();
     setPlainText(text);
+    setFirstSave(true);
     document()->setModified(false);
     emit documentChanged();
 }
 
-bool TextEditor::save()
+void TextEditor::save()
 {
-    QFile file(m_fileName);
-
-    if (!file.open(QFile::WriteOnly | QFile::Truncate)) {
-        QMessageBox::critical(this, tr("Critical"), tr("Cannot write file: ") + file.errorString());
-        return false;
+    if (!firstSave()) {
+        saveAs();
     }
 
-    QTextStream stream(&file);
-    stream << toPlainText();
-    stream.flush();
-    file.close();
+    QFile file(m_fileName);
+    if (!file.open(QFile::WriteOnly | QFile::Truncate)) {
+        QMessageBox::critical(this, tr("Critical"), tr("Cannot write file: ") + file.errorString());
+        return;
+    }
 
-    document()->setModified(false);
-    emit documentChanged();
-
-    return true;
+    if (file.open(QIODevice::WriteOnly)) {
+        file.write(toPlainText().toUtf8());
+        setFirstSave(true);
+        document()->setModified(false);
+        emit documentChanged();
+    }
 }
 
-bool TextEditor::saveAs()
+void TextEditor::saveAs()
 {
-    QFileDialog::saveFileContent(toPlainText().toUtf8(), QApplication::applicationDirPath() + QString(QDir::separator()) + m_fileName);
-    document()->setModified(false);
-    emit documentChanged();
+    saveFileContent(toPlainText().toUtf8(), QApplication::applicationDirPath() + QString(QDir::separator()) + m_fileName);
+}
 
-    return true;
+void TextEditor::saveFileContent(const QByteArray &fileContent, const QString &fileNameHint)
+{
+    QFileDialog *dialog = new QFileDialog();
+    dialog->setAcceptMode(QFileDialog::AcceptSave);
+    dialog->setFileMode(QFileDialog::AnyFile);
+    dialog->selectFile(fileNameHint);
+    auto fileSelected = [=](const QString &fileName) {
+        if (!fileName.isNull()) {
+            QFile selectedFile(fileName);
+            if (selectedFile.open(QIODevice::WriteOnly)) {
+                selectedFile.write(fileContent);
+                m_fileName = fileName;
+                setFirstSave(true);
+                document()->setModified(false);
+                emit documentChanged();
+            }
+            else {
+                QMessageBox::critical(this, tr("Critical"), tr("Cannot write file: ") + selectedFile.errorString());
+            }
+        }
+    };
+    auto dialogClosed = [=](int code) {
+        Q_UNUSED(code);
+        delete dialog;
+    };
+    connect(dialog, &QFileDialog::fileSelected, fileSelected);
+    connect(dialog, &QFileDialog::finished, dialogClosed);
+    dialog->show();
 }
 
 void TextEditor::printer()
@@ -146,22 +178,6 @@ void TextEditor::printer()
         return;
     }
     print(&printer);
-}
-
-QString TextEditor::getCompleteFileName() const
-{
-    return m_fileName;
-}
-
-QString TextEditor::getFileName() const
-{
-    QFileInfo info(m_fileName);
-    QString name = "";
-    if (info.exists())
-    {
-        name = info.fileName();
-    }
-    return name;
 }
 
 void TextEditor::updateLineNumber(const QRect &rect, int dy)

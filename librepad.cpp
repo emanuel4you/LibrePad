@@ -66,15 +66,16 @@ void Librepad::slotTabChanged(int index) {
     {
         return;
     }
+
     connect(editor, &QPlainTextEdit::redoAvailable, ui->actionRedo, &QAction::setEnabled);
     connect(editor, &QPlainTextEdit::undoAvailable, ui->actionUndo, &QAction::setEnabled);
     connect(editor, &TextEditor::documentChanged, this, [=]() {
-        QString title = editor->getFileName();
-        ui->tabWidget->tabBar()->setTabText(index, title);
-        ui->tabWidget->tabBar()->setTabToolTip(index, editor->getCompleteFileName());
+        ui->tabWidget->tabBar()->setTabText(index, editor->fileName());
+        ui->tabWidget->tabBar()->setTabToolTip(index, editor->fileName());
     });
-    setWindowTitle(editor->getFileName());
-    ui->tabWidget->tabBar()->setTabText(index, editor->getFileName());
+
+    setWindowTitle(editor->fileName());
+    ui->tabWidget->tabBar()->setTabText(index, editor->fileName());
 }
 
 void Librepad::closeEvent(QCloseEvent *event)
@@ -245,22 +246,15 @@ void Librepad::addNewTab(QString fileName)
     ui->tabWidget->addTab(editor, info.fileName());
     int index = ui->tabWidget->count() - 1;
     ui->tabWidget->setCurrentIndex(index);
-    editor->load(fileName);
-    editor->setFont(QFont("Monospace", 10));
-    editor->setFocus();
-    editor->update();
-    setWindowTitle(editor->getCompleteFileName());
-    ui->tabWidget->tabBar()->setTabToolTip(index, editor->getCompleteFileName());
+    ui->tabWidget->tabBar()->setTabText(index, editor->fileName());
+    ui->tabWidget->tabBar()->setTabToolTip(index, editor->fileName());
+    setWindowTitle(editor->fileName());
 
     connect(editor, &TextEditor::documentChanged, this, [=]() {
-        QString title = editor->getFileName();
-        ui->tabWidget->tabBar()->setTabText(index, title);
-        ui->tabWidget->tabBar()->setTabToolTip(index, editor->getCompleteFileName());
-        setWindowTitle(title);
-        ui->tabWidget->tabBar()->setTabToolTip(index, editor->getCompleteFileName());
+        setWindowTitle(editor->fileName());
+        ui->tabWidget->tabBar()->setTabText(index, editor->fileName());
+        ui->tabWidget->tabBar()->setTabToolTip(index, editor->fileName());
     });
-
-    editor->update(); // FIXME QT6
 }
 
 Librepad::~Librepad()

@@ -5,6 +5,7 @@
 #define TEXTEDITOR_H
 
 #include <QPlainTextEdit>
+#include <QFileInfo>
 
 class LineNumberWidget;
 class TextEditor : public QPlainTextEdit
@@ -17,13 +18,18 @@ public:
     void lineNumberPaintEvent(QPaintEvent *e);
 
     void load(QString fileName);
-    bool save();
-    bool saveAs();
+    void save();
+    void saveAs();
     void printer();
     void update();
 
-    QString getCompleteFileName() const;
-    QString getFileName() const;
+    QString path() const { return m_fileName; }
+
+    QString fileName() const
+    {
+        QFileInfo info(m_fileName);
+        return info.fileName();
+    }
 
 signals:
     void documentChanged();
@@ -42,6 +48,11 @@ private slots:
 private:
     LineNumberWidget *m_lineNumberWidget;
     QString m_fileName;
+    bool m_firstSave;
+
+    void setFirstSave(bool state) { m_firstSave = state; }
+    bool firstSave() const { return m_firstSave; }
+    void saveFileContent(const QByteArray &fileContent, const QString &fileNameHint);
 };
 
 class LineNumberWidget : public QWidget

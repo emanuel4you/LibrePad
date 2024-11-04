@@ -21,7 +21,6 @@ public:
     void save();
     void saveAs();
     void printer();
-    void update();
 
     QString path() const { return m_fileName; }
 

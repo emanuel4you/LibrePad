@@ -255,6 +255,7 @@ void Librepad::addNewTab(QString fileName)
         ui->tabWidget->tabBar()->setTabText(index, editor->fileName());
         ui->tabWidget->tabBar()->setTabToolTip(index, editor->fileName());
     });
+    editor->setFocus();
 }
 
 Librepad::~Librepad()

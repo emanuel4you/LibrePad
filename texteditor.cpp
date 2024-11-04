@@ -37,12 +37,6 @@ TextEditor::~TextEditor()
     m_lineNumberWidget = nullptr;
 }
 
-void TextEditor::update()
-{
-    document()->setModified(false);
-    emit documentChanged();
-}
-
 void TextEditor::lineNumberPaintEvent(QPaintEvent *e)
 {
     QTextBlock block = firstVisibleBlock();
@@ -82,7 +76,6 @@ void TextEditor::load(QString fileName)
     if(fileName == "") {
         m_fileName = tr("newfile.txt");
         setFont(QFont("Monospace", 10));
-        setFocus();
         document()->setModified(false);
         emit documentChanged();
         return;
@@ -104,7 +97,6 @@ void TextEditor::load(QString fileName)
     file.close();
 
     setFont(QFont("Monospace", 10));
-    setFocus();
     setPlainText(text);
     setFirstSave(true);
     document()->setModified(false);
@@ -122,10 +114,9 @@ void TextEditor::save()
         QMessageBox::critical(this, tr("Critical"), tr("Cannot write file: ") + file.errorString());
         return;
     }
-
-    if (file.open(QIODevice::WriteOnly)) {
+    else {
         file.write(toPlainText().toUtf8());
-        setFirstSave(true);
+        file.close();
         document()->setModified(false);
         emit documentChanged();
     }
@@ -133,7 +124,7 @@ void TextEditor::save()
 
 void TextEditor::saveAs()
 {
-    saveFileContent(toPlainText().toUtf8(), QApplication::applicationDirPath() + QString(QDir::separator()) + m_fileName);
+    saveFileContent(toPlainText().toUtf8(), fileName());
 }
 
 void TextEditor::saveFileContent(const QByteArray &fileContent, const QString &fileNameHint)
@@ -147,6 +138,7 @@ void TextEditor::saveFileContent(const QByteArray &fileContent, const QString &f
             QFile selectedFile(fileName);
             if (selectedFile.open(QIODevice::WriteOnly)) {
                 selectedFile.write(fileContent);
+		selectedFile.close();
                 m_fileName = fileName;
                 setFirstSave(true);
                 document()->setModified(false);

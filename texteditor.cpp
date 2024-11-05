@@ -14,7 +14,6 @@
 #include <QPrinter>
 #include <QDir>
 
-
 TextEditor::TextEditor(QWidget *parent, const QString& fileName)
     : QPlainTextEdit(parent)
     , m_lineNumberWidget(new LineNumberWidget(this))
@@ -61,9 +60,9 @@ void TextEditor::lineNumberPaintEvent(QPaintEvent *e)
         // qDebug() << "lineNumbe" << lineNumber << "top " << top << "bottom " << bottom;
         QRect rect(0, top, getLineNumberWidth() - 2, lineHeight);
         QFont font = painter.font();
-        font.setPointSize(12);
+        font.setPointSize(9);
         painter.setFont(font);
-        painter.drawText(rect, Qt::AlignRight | Qt::AlignVCenter, QString::number(lineNumber + 1));
+        painter.drawText(rect, Qt::AlignLeft | Qt::AlignVCenter, QString::number(lineNumber + 1));
 
         block  = block.next();
         top    = bottom;
@@ -95,8 +94,6 @@ void TextEditor::load(QString fileName)
 
     QString text = file.readAll();
     file.close();
-
-    setFont(QFont("Monospace", 10));
     setPlainText(text);
     setFirstSave(true);
     document()->setModified(false);
@@ -107,6 +104,7 @@ void TextEditor::save()
 {
     if (!firstSave()) {
         saveAs();
+        return;
     }
 
     QFile file(m_fileName);
@@ -138,11 +136,10 @@ void TextEditor::saveFileContent(const QByteArray &fileContent, const QString &f
             QFile selectedFile(fileName);
             if (selectedFile.open(QIODevice::WriteOnly)) {
                 selectedFile.write(fileContent);
-		selectedFile.close();
-                m_fileName = fileName;
+                selectedFile.close();
                 setFirstSave(true);
-                document()->setModified(false);
-                emit documentChanged();
+                m_fileName = fileName;
+                reload();
             }
             else {
                 QMessageBox::critical(this, tr("Critical"), tr("Cannot write file: ") + selectedFile.errorString());
@@ -156,6 +153,20 @@ void TextEditor::saveFileContent(const QByteArray &fileContent, const QString &f
     connect(dialog, &QFileDialog::fileSelected, fileSelected);
     connect(dialog, &QFileDialog::finished, dialogClosed);
     dialog->show();
+}
+
+void TextEditor::reload()
+{
+    if (!firstSave()) {
+        saveAs();
+    }
+    QFile file(m_fileName);
+    file.open(QIODevice::ReadOnly | QFile::Text);
+    QString text = file.readAll();
+    file.close();
+    setPlainText(text);
+    document()->setModified(false);
+    emit documentChanged();
 }
 
 void TextEditor::printer()
@@ -192,7 +203,7 @@ void TextEditor::highlightCurrentLine()
     QList<QTextEdit::ExtraSelection> extraSelections;
 
     QTextEdit::ExtraSelection selection;
-    selection.format.setBackground(QColor(0, 100, 100, 20));
+    selection.format.setBackground(QColor(248, 247, 246));
     selection.format.setProperty(QTextFormat::FullWidthSelection, true);
     selection.cursor = textCursor();
 

@@ -21,6 +21,7 @@
 Librepad::Librepad(QWidget *parent, const QString& fileName)
     : QMainWindow(parent)
     , m_fileName(fileName)
+    , m_font(QFont("Monospace",10))
     , ui(new Ui::Librepad)
 {
     this->hide();
@@ -37,6 +38,7 @@ Librepad::Librepad(QWidget *parent, const QString& fileName)
     connect(ui->actionOpen, &QAction::triggered, this, &Librepad::open);
     connect(ui->actionSave, &QAction::triggered, this, &Librepad::save);
     connect(ui->actionSave_as, &QAction::triggered, this, &Librepad::saveAs);
+    connect(ui->actionReload, &QAction::triggered, this, &Librepad::reload);
     connect(ui->actionPrint, &QAction::triggered, this, &Librepad::print);
     connect(ui->actionExit, &QAction::triggered, this, &QWidget::close);
     connect(ui->actionUndo, &QAction::triggered, this, &Librepad::undo);
@@ -57,6 +59,7 @@ Librepad::Librepad(QWidget *parent, const QString& fileName)
 
     connect(ui->tabWidget, SIGNAL(currentChanged(int)), this, SLOT(slotTabChanged(int)));
 
+    readSettings();
     addNewTab(m_fileName);
 }
 
@@ -80,6 +83,8 @@ void Librepad::slotTabChanged(int index) {
 
 void Librepad::closeEvent(QCloseEvent *event)
 {
+    writeSettings();
+
     for(int i = 0; i < ui->tabWidget->count(); i++) {
         TextEditor *editor = dynamic_cast<TextEditor *>(ui->tabWidget->widget(i));
         if (editor == nullptr)
@@ -103,6 +108,16 @@ void Librepad::closeEvent(QCloseEvent *event)
             }
         }
     }
+}
+
+void Librepad::reload()
+{
+    TextEditor *editor = dynamic_cast<TextEditor *>(ui->tabWidget->widget(ui->tabWidget->currentIndex()));
+    if (editor == nullptr)
+    {
+        return;
+    }
+    editor->reload();
 }
 
 void Librepad::redo()
@@ -243,6 +258,8 @@ void Librepad::addNewTab(QString fileName)
     QFileInfo info(fileName);
     TextEditor *editor = new TextEditor(this, fileName);
 
+    editor->setFont(m_font);
+
     ui->tabWidget->addTab(editor, info.fileName());
     int index = ui->tabWidget->count() - 1;
     ui->tabWidget->setCurrentIndex(index);
@@ -318,13 +335,15 @@ void Librepad::setFont()
 {
     bool ok;
     QFont font = QFontDialog::getFont(
-        &ok, QFont("", 10), this);
+        &ok, QFont("Monospace", 10), this);
     if (ok) {
         TextEditor *editor = dynamic_cast<TextEditor *>(ui->tabWidget->widget(ui->tabWidget->currentIndex()));
         if (editor == nullptr)
         {
             return;
         }
+        m_font = font;
+        writeFontSettings();
         editor->setFont(font);
     }
 }
@@ -337,3 +356,70 @@ void Librepad::about()
                       );
 }
 
+void Librepad::writeSettings()
+{
+    QSettings settings("Librepad", "Librepad");
+
+    settings.beginGroup("MainWindow");
+    settings.setValue("geometry", saveGeometry());
+    settings.endGroup();
+}
+
+void Librepad::writeFontSettings()
+{
+    QSettings settings("Librepad", "Librepad");
+
+    settings.beginGroup("Font");
+    settings.setValue("librepad/fontpointsize", m_font.pointSize());
+    settings.setValue("librepad/fontfamily", m_font.family());
+    settings.setValue("librepad/fontbold", m_font.bold());
+    settings.setValue("librepad/fontitalic", m_font.italic());
+    settings.endGroup();
+}
+
+void Librepad::readSettings()
+{
+    QSettings settings("Librepad", "Librepad");
+
+    settings.beginGroup("MainWindow");
+    const auto geometry = settings.value("geometry", QByteArray()).toByteArray();
+    if (geometry.isEmpty())
+        setGeometry(320, 280, 1280, 720);
+    else
+        restoreGeometry(geometry);
+    settings.endGroup();
+
+    settings.beginGroup("Font");
+    const auto pointsize = settings.value("librepad/fontpointsize").toInt();
+    if (settings.contains("librepad/fontpointsize")) {
+        m_font.setPointSize(pointsize);
+    }
+    else {
+        m_font.setPointSize(10);
+    }
+
+    if (settings.contains("librepad/fontfamily")) {
+        const auto family = settings.value("librepad/fontfamily").toString();
+        m_font.setFamily(family);
+    }
+    else {
+        m_font.setFamily("Monospace");
+    }
+
+    if (settings.contains("librepad/fontbold")) {
+        const bool bold = settings.value("librepad/fontbold").toBool();
+        m_font.setBold(bold);
+    }
+    else {
+        m_font.setBold(false);
+    }
+
+    if (settings.contains("librepad/fontitalic")) {
+        const bool italic = settings.value("librepad/fontitalic").toBool();
+        m_font.setItalic(italic);
+    }
+    else {
+        m_font.setItalic(false);
+    }
+    settings.endGroup();
+}

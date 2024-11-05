@@ -18,6 +18,7 @@ public:
     void lineNumberPaintEvent(QPaintEvent *e);
 
     void load(QString fileName);
+    void reload();
     void save();
     void saveAs();
     void printer();

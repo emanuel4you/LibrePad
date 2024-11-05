@@ -7,6 +7,7 @@
 #include <QMainWindow>
 #include <QLineEdit>
 #include <QCloseEvent>
+#include <QSettings>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -29,6 +30,7 @@ private slots:
     void open();
     void save();
     void saveAs();
+    void reload();
     void print();
     void undo();
     void redo();
@@ -42,10 +44,14 @@ protected:
 
 private:
     QString m_fileName;
+    QFont m_font;
     Ui::Librepad *ui;
     QLineEdit* m_searchLineEdit;
 
     void addNewTab(QString fileName = "");
+    void writeSettings();
+    void writeFontSettings();
+    void readSettings();
 };
 
 #endif // NOTEPAD_H

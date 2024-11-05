@@ -15,5 +15,6 @@
         <file>images/edit_undo.png</file>
         <file>images/next.png</file>
         <file>images/previous.png</file>
+        <file>images/reload.png</file>
     </qresource>
 </RCC>
